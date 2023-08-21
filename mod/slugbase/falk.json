@@ -1,0 +1,13 @@
+{
+	"id": "Falk",
+	"name": "Falk",
+	"description": "Original character by Precipitator inspired by the Rivulet and Echoes.",
+	"features": {
+		"custom_colors": [
+			{ "name": "Body", "story": "466B78" },
+  			{ "name": "Eyes", "story": "FFF8A3" },
+  			{ "name": "Gills", "story": "FFF8A3" }],
+		"select_menu_scene": "Slugcat_Falk",
+		"select_menu_scene_ascended": "Ghost_Falk"
+	}
+}

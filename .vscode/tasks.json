@@ -1,0 +1,19 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    // https://stackoverflow.com/questions/47707095/visual-studio-code-for-net-framework
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "src/SlugBaseFalk.csproj",
+                "/p:DebugType=None" // Don't build pdb.
+            ],
+            "problemMatcher": "$msCompile"
+        }
+    ]
+}

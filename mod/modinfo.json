@@ -1,10 +1,10 @@
 ﻿{
-	"id": "author.slugtemplate",
-	"name": "Slugcat Template",
+	"id": "precipitator.slugbasefalk",
+	"name": "SlugBase Falk",
 	"version": "0.1.0",
-	"authors": "Author",
-	"description": "A template for making SlugBase mods.",
-	"requirements": [ "slime-cubed.slugbase" ],
-	"requirements_names": [ "SlugBase" ],
+	"authors": "Precipitator",
+	"description": "Falk in slugbase.",
+	"requirements": [ "slime-cubed.slugbase", "moreslugcats", "dressmyslugcat" ],
+	"requirements_names": [ "SlugBase", "More Slugcats", "Dress My Slugcat" ],
 	"tags": [ "Custom Slugcat" ]
 }
