@@ -1,6 +1,6 @@
-using System;
 using RWCustom;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace SlugBaseFalk
 {
@@ -19,7 +19,7 @@ namespace SlugBaseFalk
         public void PlaceRandomlyAroundPlayer()
         {
             this.ResetMe();
-            this.pos = this.player.bodyChunks[0].pos + new Vector2(Mathf.Lerp(-100f, 100f, UnityEngine.Random.value), Mathf.Lerp(-100f, 100f, UnityEngine.Random.value));
+            this.pos = this.player.bodyChunks[0].pos + new Vector2(Mathf.Lerp(-100f, 100f, Random.value), Mathf.Lerp(-100f, 100f, Random.value));
             this.lastPos = this.pos;
         }
 
@@ -33,8 +33,8 @@ namespace SlugBaseFalk
             base.Update(eu);
             this.vel *= 0.82f;
             this.vel.y = this.vel.y - 0.25f;
-            this.vel += RWCustom.Custom.DegToVec(180f + Mathf.Lerp(-45f, 45f, UnityEngine.Random.value)) * 0.1f;
-            this.vel += RWCustom.Custom.DegToVec(this.rot + this.velRotAdd + this.yRot) * Mathf.Lerp(0.1f, 0.25f, UnityEngine.Random.value);
+            this.vel += RWCustom.Custom.DegToVec(180f + Mathf.Lerp(-45f, 45f, Random.value)) * 0.1f;
+            this.vel += RWCustom.Custom.DegToVec(this.rot + this.velRotAdd + this.yRot) * Mathf.Lerp(0.1f, 0.25f, Random.value);
             if (this.room.GetTile(this.pos).Solid && this.room.GetTile(this.lastPos).Solid)
             {
                 this.reset = true;
@@ -42,7 +42,7 @@ namespace SlugBaseFalk
             if (this.reset)
             {
                 float radius = 75f;
-                this.pos = this.player.bodyChunks[0].pos + new Vector2(Mathf.Lerp(-radius, radius, UnityEngine.Random.value), Mathf.Lerp(-radius, radius, UnityEngine.Random.value));
+                this.pos = this.player.bodyChunks[0].pos + new Vector2(Mathf.Lerp(-radius, radius, Random.value), Mathf.Lerp(-radius, radius, Random.value));
                 this.lastPos = this.pos;
                 this.ResetMe();
                 this.reset = false;
@@ -77,29 +77,29 @@ namespace SlugBaseFalk
             }
             this.lastRot = this.rot;
             this.rot += this.rotSpeed;
-            this.rotSpeed = Mathf.Clamp(this.rotSpeed + Mathf.Lerp(-1f, 1f, UnityEngine.Random.value) / 30f, -10f, 10f);
+            this.rotSpeed = Mathf.Clamp(this.rotSpeed + Mathf.Lerp(-1f, 1f, Random.value) / 30f, -10f, 10f);
             this.lastYRot = this.yRot;
             this.yRot += this.yRotSpeed;
-            this.yRotSpeed = Mathf.Clamp(this.yRotSpeed + Mathf.Lerp(-1f, 1f, UnityEngine.Random.value) / 320f, -0.05f, 0.05f);
+            this.yRotSpeed = Mathf.Clamp(this.yRotSpeed + Mathf.Lerp(-1f, 1f, Random.value) / 320f, -0.05f, 0.05f);
         }
 
         public void ResetMe()
         {
-            this.velRotAdd = UnityEngine.Random.value * 360f;
+            this.velRotAdd = Random.value * 360f;
             this.vel = Custom.RNV();
-            this.scale = UnityEngine.Random.value;
-            this.rot = UnityEngine.Random.value * 360f;
+            this.scale = Random.value;
+            this.rot = Random.value * 360f;
             this.lastRot = this.rot;
-            this.rotSpeed = Mathf.Lerp(2f, 10f, UnityEngine.Random.value) * ((UnityEngine.Random.value < 0.5f) ? (-1f) : 1f);
-            this.yRot = UnityEngine.Random.value * 3.1415927f;
+            this.rotSpeed = Mathf.Lerp(2f, 10f, Random.value) * ((Random.value < 0.5f) ? (-1f) : 1f);
+            this.yRot = Random.value * 3.1415927f;
             this.lastYRot = this.yRot;
-            this.yRotSpeed = Mathf.Lerp(0.02f, 0.05f, UnityEngine.Random.value) * ((UnityEngine.Random.value < 0.5f) ? (-1f) : 1f);
+            this.yRotSpeed = Mathf.Lerp(0.02f, 0.05f, Random.value) * ((Random.value < 0.5f) ? (-1f) : 1f);
         }
 
         public override void InitiateSprites(RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
         {
             sLeaser.sprites = new FSprite[1];
-            sLeaser.sprites[0] = new FSprite("Pebble" + UnityEngine.Random.Range(1, 15).ToString(), true);
+            sLeaser.sprites[0] = new FSprite("Pebble" + Random.Range(1, 15).ToString(), true);
             this.AddToContainer(sLeaser, rCam, null);
         }
 

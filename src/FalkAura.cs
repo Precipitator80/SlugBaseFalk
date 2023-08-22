@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace SlugBaseFalk
 {
-    class FalkAura
+    public class FalkAura
     {
         public FalkAura(Player player)
         {

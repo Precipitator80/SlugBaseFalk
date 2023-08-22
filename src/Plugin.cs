@@ -3,7 +3,9 @@ using BepInEx;
 using UnityEngine;
 using SlugBase.Features;
 using static SlugBase.Features.FeatureTypes;
-using IL.ScavengerCosmetic;
+using MonoMod.RuntimeDetour;
+using MoreSlugcats;
+using Expedition;
 
 namespace SlugBaseFalk
 {
@@ -23,22 +25,28 @@ namespace SlugBaseFalk
             On.PlayerGraphics.DrawSprites += HookPlayerGraphicsDrawSprites;
             On.PlayerGraphics.InitiateSprites += HookPlayerGraphicsInitiateSprites;
             On.PlayerGraphics.Update += HookPlayerGraphicsUpdate;
-            On.PlayerGraphics.ApplyPalette += PlayerGraphics_ApplyPalette;
+            On.WaterNut.Update += HookWaterNutUpdate;
+            On.Player.UpdateMSC += HookPlayerUpdateMSC;
+            On.PlayerGraphics.AxolotlGills.SetGillColors += HookPlayerGraphicsAxolotlGillsSetGillColors;
+
+            On.PlayerGraphics.ctor += PlayerGraphics_ctor;
+
+            new Hook(typeof(Player).GetProperty("isRivulet", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetGetMethod(), typeof(SlugBaseFalk.Plugin).GetMethod("HookPlayerget_isRivulet"), null);
         }
 
         // Load any resources, such as sprites or sounds
         private void LoadResources(RainWorld rainWorld)
         {
-            Debug.Log("Loading atlas.");
-            FAtlas atlas = Futile.atlasManager.LoadAtlas(string.Concat("atlases/", TAIL_SPRITE_NAME));
-            Debug.Log("Adding atlas.");
-            Futile.atlasManager.AddAtlas(atlas);
+            FalkEnums.RegisterValues();
+
+            TailAtlasTemplate = Futile.atlasManager.LoadAtlas(string.Concat("atlases/", TAIL_SPRITE_NAME));
+            Debug.Log("Loaded tail successfully.");
         }
 
         private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<PlayerGraphics, FalkSpriteStartIndices> _falkSprites = new();
-        FalkAura falkAura;
-        private static readonly Color baseColor = new Color(0.27451f, 0.41961f, 0.47059f);
-        private static readonly Color effectColor = new Color(1f, 0.97255f, 0.63922f);
+        //public static Texture2D TailTexture;
+        public static FAtlas TailAtlasTemplate;
+        private static readonly string TAIL_SPRITE_NAME = "falkTail";
 
         private class FalkSpriteStartIndices
         {
@@ -47,9 +55,16 @@ namespace SlugBaseFalk
 
         private void HookPlayerUpdate(On.Player.orig_Update orig, Player player, bool eu)
         {
-            if (falkAura == null)
+            orig.Invoke(player, eu);
+
+            if (!player.IsFalk(out var falk))
             {
-                falkAura = new FalkAura(player);
+                return;
+            }
+
+            if (falk.falkAura == null)
+            {
+                falk.falkAura = new FalkAura(player);
             }
             if (player.input[0].mp && !player.input[1].mp)
             {
@@ -57,18 +72,22 @@ namespace SlugBaseFalk
                 {
                     if (player.input[i].mp)
                     {
-                        falkAura.SwitchAuraState();
+                        falk.falkAura.SwitchAuraState();
                         break;
                     }
                 }
             }
-            falkAura.Update();
-            orig.Invoke(player, eu);
+            falk.falkAura.Update();
         }
 
         private void HookPlayerGraphicsInitiateSprites(On.PlayerGraphics.orig_InitiateSprites orig, PlayerGraphics playerGraphics, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
         {
             orig.Invoke(playerGraphics, sLeaser, rCam);
+
+            if (!playerGraphics.player.IsFalk(out var falk))
+            {
+                return;
+            }
 
             var newSprites = _falkSprites.GetValue(playerGraphics, _ => new());
 
@@ -86,12 +105,40 @@ namespace SlugBaseFalk
                 alpha = 0.2f
             };
 
+            if (sLeaser.sprites[2] is TriangleMesh tail && falk.TailAtlas.elements != null && falk.TailAtlas.elements.Count > 0)
+            {
+                tail.element = falk.TailAtlas.elements[0];
+                for (var i = tail.vertices.Length - 1; i >= 0; i--)
+                {
+                    var perc = i / 2 / (float)(tail.vertices.Length / 2);
+                    //tail.verticeColors[i] = Color.Lerp(fromColor, toColor, perc);
+                    Vector2 uv;
+                    if (i % 2 == 0)
+                        uv = new Vector2(perc, 0f);
+                    else if (i < tail.vertices.Length - 1)
+                        uv = new Vector2(perc, 1f);
+                    else
+                        uv = new Vector2(1f, 0f);
+
+                    // Map UV values to the element
+                    uv.x = Mathf.Lerp(tail.element.uvBottomLeft.x, tail.element.uvTopRight.x, uv.x);
+                    uv.y = Mathf.Lerp(tail.element.uvBottomLeft.y, tail.element.uvTopRight.y, uv.y);
+
+                    tail.UVvertices[i] = uv;
+                }
+            }
+
             playerGraphics.AddToContainer(sLeaser, rCam, null);
         }
 
         private void HookPlayerGraphicsAddToContainer(On.PlayerGraphics.orig_AddToContainer orig, PlayerGraphics playerGraphics, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, FContainer newContatiner)
         {
             orig.Invoke(playerGraphics, sLeaser, rCam, newContatiner);
+
+            if (!playerGraphics.player.IsFalk())
+            {
+                return;
+            }
 
             if (_falkSprites.TryGetValue(playerGraphics, out var newSprites) && newSprites.shield < sLeaser.sprites.Length)
             {
@@ -103,104 +150,100 @@ namespace SlugBaseFalk
         public void HookPlayerGraphicsDrawSprites(On.PlayerGraphics.orig_DrawSprites orig, PlayerGraphics playerGraphics, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
         {
             orig.Invoke(playerGraphics, sLeaser, rCam, timeStacker, camPos);
-            if (!rCam.room.game.DEBUGMODE)
+
+            if (!playerGraphics.player.IsFalk(out var falk))
             {
-                playerGraphics.gills.DrawSprites(sLeaser, rCam, timeStacker, camPos);
-                playerGraphics.gills.SetGillColors(baseColor, effectColor);
+                return;
             }
-            falkAura?.DisruptorDrawSprites(sLeaser);
+
+            if (!rCam.room.game.DEBUGMODE && playerGraphics.player.room != null)
+            {
+                sLeaser.sprites[2].color = Color.white;
+
+                playerGraphics.gills.DrawSprites(sLeaser, rCam, timeStacker, camPos);
+
+                falk.falkAura?.DisruptorDrawSprites(sLeaser);
+            }
         }
 
         public void HookPlayerGraphicsUpdate(On.PlayerGraphics.orig_Update orig, PlayerGraphics playerGraphics)
         {
             orig.Invoke(playerGraphics);
+
+            if (!playerGraphics.player.IsFalk())
+            {
+                return;
+            }
+
             if (playerGraphics.player.room != null)
             {
                 playerGraphics.gills.Update();
             }
         }
 
-        private static bool _lockApplyPalette = false;
-        private static bool _loggedMissingSprite = false;
-        private static readonly string TAIL_SPRITE_NAME = "falkTail";
-        public void PlayerGraphics_ApplyPalette(On.PlayerGraphics.orig_ApplyPalette orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, RoomPalette palette)
+        private void PlayerGraphics_ctor(On.PlayerGraphics.orig_ctor orig, PlayerGraphics playerGraphics, PhysicalObject ow)
         {
-            // Work-around to avoid calling this hook multiple times
-            if (_lockApplyPalette)
+            orig(playerGraphics, ow);
+
+            if (!playerGraphics.player.IsFalk(out var falk))
             {
-                orig(self, sLeaser, rCam, palette);
                 return;
             }
 
-            _lockApplyPalette = true;
-            orig(self, sLeaser, rCam, palette);
-            _lockApplyPalette = false;
+            falk.SetupColors(playerGraphics);
+            falk.LoadTailAtlas();
+        }
 
-            // Edit the tail sprite
-            // Note that, while it is a mesh, meshes inherit from FSprite, so it's still a sprite :)
-            TriangleMesh tail = null;
-            for (int i = 0; i < sLeaser.sprites.Length; i++)
-            {
-                if (sLeaser.sprites[i] is TriangleMesh tm)
-                {
-                    tail = tm;
-                    break;
-                }
-            }
+        public static bool HookPlayerget_isRivulet(Player player)
+        {
+            return (ModManager.MSC && player.SlugCatClass == MoreSlugcatsEnums.SlugcatStatsName.Rivulet) || (ModManager.MSC && ModManager.Expedition && RWCustom.Custom.rainWorld.ExpeditionMode && ExpeditionGame.activeUnlocks.Contains("unl-agility")) || player.IsFalk();
+        }
 
-            if (tail != null)
+        private void HookWaterNutUpdate(On.WaterNut.orig_Update orig, WaterNut waterNut, bool eu)
+        {
+            orig.Invoke(waterNut, eu);
+            if (waterNut.grabbedBy.Count > 0)
             {
-                // Set the tail's element to a custom sprite
-                try
+                for (int i = 0; i < waterNut.grabbedBy.Count; i++)
                 {
-                    Debug.Log("Getting element from atlas.");
-                    tail.element = Futile.atlasManager.GetElementWithName(TAIL_SPRITE_NAME);
-                    Debug.Log(TAIL_SPRITE_NAME + " loaded successfully.");
-                }
-                catch (FutileException e)
-                {
-                    if (!_loggedMissingSprite)
+                    if (waterNut.grabbedBy[i].grabber is Player)
                     {
-                        _loggedMissingSprite = true;
-                        Debug.Log(TAIL_SPRITE_NAME + " failed to load!");
-                        Debug.LogError(new Exception($"Tail sprite \"{TAIL_SPRITE_NAME}\" not found. Defaulting to \"Futile_White\". Further errors will not be logged.", e));
+                        if (((Player)waterNut.grabbedBy[i].grabber).IsFalk())
+                        {
+                            waterNut.swellCounter--;
+                            if (waterNut.swellCounter < 1)
+                            {
+                                waterNut.Swell();
+                            }
+                            return;
+                        }
                     }
-                    tail.element = Futile.atlasManager.GetElementWithName("Futile_White");
                 }
-
-                // Register that the tail must have custom colors
-                if (tail.verticeColors == null || tail.verticeColors.Length != tail.vertices.Length)
-                {
-                    tail.verticeColors = new Color[tail.vertices.Length];
-                }
-
-                tail.customColor = true;
-
-                // Use the player's color when the given color is exactly black
-                Color fromColor = Color.white;
-                Color toColor = Color.white;
-
-                // Calculate UVs and colors
-                for (int i = tail.verticeColors.Length - 1; i >= 0; i--)
-                {
-                    float perc = i / 2 / (float)(tail.verticeColors.Length / 2);
-                    tail.verticeColors[i] = Color.Lerp(fromColor, toColor, perc);
-                    Vector2 uv;
-                    if (i % 2 == 0)
-                        uv = new Vector2(perc, 0f);
-                    else if (i < tail.verticeColors.Length - 1)
-                        uv = new Vector2(perc, 1f);
-                    else
-                        uv = new Vector2(1f, 0f);
-
-                    // Map UV values to the element
-                    uv.x = Mathf.Lerp(tail.element.uvBottomLeft.x, tail.element.uvTopRight.x, uv.x);
-                    uv.y = Mathf.Lerp(tail.element.uvBottomLeft.y, tail.element.uvTopRight.y, uv.y);
-
-                    tail.UVvertices[i] = uv;
-                }
-                tail.Refresh();
             }
+        }
+
+        private static void HookPlayerUpdateMSC(On.Player.orig_UpdateMSC orig, Player player)
+        {
+            orig.Invoke(player);
+
+            if (!player.IsFalk())
+            {
+                return;
+            }
+
+            if (!player.monkAscension)
+            {
+                player.buoyancy = 0.9f;
+            }
+        }
+
+        private void HookPlayerGraphicsAxolotlGillsSetGillColors(On.PlayerGraphics.AxolotlGills.orig_SetGillColors orig, PlayerGraphics.AxolotlGills playerGraphicsAxolotlGills, Color baseCol, Color effectCol)
+        {
+            if (playerGraphicsAxolotlGills.pGraphics.player.IsFalk())
+            {
+                effectCol = SlugBase.DataTypes.PlayerColor.GetCustomColor(playerGraphicsAxolotlGills.pGraphics, "Gills");
+            }
+            orig.Invoke(playerGraphicsAxolotlGills, baseCol, effectCol);
         }
     }
 }

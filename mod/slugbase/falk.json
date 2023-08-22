@@ -6,15 +6,43 @@
 		"custom_colors": [
 			{
 				"name": "Body",
-				"story": "466B78"
+				"story": "466B78",
+				"arena": [
+					"466B78",
+					"FFF8A3",
+					"80FF80",
+					"8080FF"
+				]
 			},
 			{
 				"name": "Eyes",
-				"story": "FFF8A3"
+				"story": "FFF8A3",
+				"arena": [
+					"FFF8A3",
+					"466B78",
+					"8080FF",
+					"80FF80"
+				]
 			},
 			{
 				"name": "Gills",
-				"story": "FFF8A3"
+				"story": "FFF8A3",
+				"arena": [
+					"FFF8A3",
+					"466B78",
+					"8080FF",
+					"80FF80"
+				]
+			},
+			{
+				"name": "Diamonds",
+				"story": "FFF8A3",
+				"arena": [
+					"FFF8A3",
+					"466B78",
+					"8080FF",
+					"80FF80"
+				]
 			}
 		],
 		"select_menu_scene": "Slugcat_Falk",
@@ -26,12 +54,12 @@
 		"walk_speed": 1.375,
 		"crouch_stealth": 0.6,
 		"throw_skill": 0,
-		"lung_capacity": 0.15,
+		"lung_capacity": 6.67,
 		"loudness": 0.85,
 		"start_room": "SL_S03",
 		"cycle_length_min": 5,
 		"cycle_length_max": 10,
 		"food_min": 5,
-		"food_max": 6
+		"food_max": 7
 	}
 }
