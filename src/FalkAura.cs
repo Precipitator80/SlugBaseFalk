@@ -26,7 +26,6 @@ namespace SlugBaseFalk
                 }
                 playerGraphics.lightSource.color = auraActive ? new Color(0.258823544f, 0.5137255f, 0.796078444f) : Color.black;
             }
-
         }
 
         public void Update()

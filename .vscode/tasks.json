@@ -5,7 +5,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build",
+            "label": "generate",
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -14,6 +14,19 @@
                 "/p:DebugType=None" // Don't build pdb.
             ],
             "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "copy",
+            "command": "xcopy 'mod' 'C:/Program Files (x86)/Steam/steamapps/common/Rain World/RainWorld_Data/StreamingAssets/mods/slugbasefalk' /i /d /y /s",
+            "type": "shell"
+        },
+        {
+            "label": "build",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "generate",
+                "copy"
+            ]
         }
     ]
 }

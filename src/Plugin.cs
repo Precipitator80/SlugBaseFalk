@@ -3,6 +3,7 @@ using BepInEx;
 using UnityEngine;
 using SlugBase.Features;
 using static SlugBase.Features.FeatureTypes;
+using IL.ScavengerCosmetic;
 
 namespace SlugBaseFalk
 {
@@ -22,11 +23,16 @@ namespace SlugBaseFalk
             On.PlayerGraphics.DrawSprites += HookPlayerGraphicsDrawSprites;
             On.PlayerGraphics.InitiateSprites += HookPlayerGraphicsInitiateSprites;
             On.PlayerGraphics.Update += HookPlayerGraphicsUpdate;
+            On.PlayerGraphics.ApplyPalette += PlayerGraphics_ApplyPalette;
         }
 
         // Load any resources, such as sprites or sounds
         private void LoadResources(RainWorld rainWorld)
         {
+            Debug.Log("Loading atlas.");
+            FAtlas atlas = Futile.atlasManager.LoadAtlas(string.Concat("atlases/", TAIL_SPRITE_NAME));
+            Debug.Log("Adding atlas.");
+            Futile.atlasManager.AddAtlas(atlas);
         }
 
         private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<PlayerGraphics, FalkSpriteStartIndices> _falkSprites = new();
@@ -111,6 +117,89 @@ namespace SlugBaseFalk
             if (playerGraphics.player.room != null)
             {
                 playerGraphics.gills.Update();
+            }
+        }
+
+        private static bool _lockApplyPalette = false;
+        private static bool _loggedMissingSprite = false;
+        private static readonly string TAIL_SPRITE_NAME = "falkTail";
+        public void PlayerGraphics_ApplyPalette(On.PlayerGraphics.orig_ApplyPalette orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, RoomPalette palette)
+        {
+            // Work-around to avoid calling this hook multiple times
+            if (_lockApplyPalette)
+            {
+                orig(self, sLeaser, rCam, palette);
+                return;
+            }
+
+            _lockApplyPalette = true;
+            orig(self, sLeaser, rCam, palette);
+            _lockApplyPalette = false;
+
+            // Edit the tail sprite
+            // Note that, while it is a mesh, meshes inherit from FSprite, so it's still a sprite :)
+            TriangleMesh tail = null;
+            for (int i = 0; i < sLeaser.sprites.Length; i++)
+            {
+                if (sLeaser.sprites[i] is TriangleMesh tm)
+                {
+                    tail = tm;
+                    break;
+                }
+            }
+
+            if (tail != null)
+            {
+                // Set the tail's element to a custom sprite
+                try
+                {
+                    Debug.Log("Getting element from atlas.");
+                    tail.element = Futile.atlasManager.GetElementWithName(TAIL_SPRITE_NAME);
+                    Debug.Log(TAIL_SPRITE_NAME + " loaded successfully.");
+                }
+                catch (FutileException e)
+                {
+                    if (!_loggedMissingSprite)
+                    {
+                        _loggedMissingSprite = true;
+                        Debug.Log(TAIL_SPRITE_NAME + " failed to load!");
+                        Debug.LogError(new Exception($"Tail sprite \"{TAIL_SPRITE_NAME}\" not found. Defaulting to \"Futile_White\". Further errors will not be logged.", e));
+                    }
+                    tail.element = Futile.atlasManager.GetElementWithName("Futile_White");
+                }
+
+                // Register that the tail must have custom colors
+                if (tail.verticeColors == null || tail.verticeColors.Length != tail.vertices.Length)
+                {
+                    tail.verticeColors = new Color[tail.vertices.Length];
+                }
+
+                tail.customColor = true;
+
+                // Use the player's color when the given color is exactly black
+                Color fromColor = Color.white;
+                Color toColor = Color.white;
+
+                // Calculate UVs and colors
+                for (int i = tail.verticeColors.Length - 1; i >= 0; i--)
+                {
+                    float perc = i / 2 / (float)(tail.verticeColors.Length / 2);
+                    tail.verticeColors[i] = Color.Lerp(fromColor, toColor, perc);
+                    Vector2 uv;
+                    if (i % 2 == 0)
+                        uv = new Vector2(perc, 0f);
+                    else if (i < tail.verticeColors.Length - 1)
+                        uv = new Vector2(perc, 1f);
+                    else
+                        uv = new Vector2(1f, 0f);
+
+                    // Map UV values to the element
+                    uv.x = Mathf.Lerp(tail.element.uvBottomLeft.x, tail.element.uvTopRight.x, uv.x);
+                    uv.y = Mathf.Lerp(tail.element.uvBottomLeft.y, tail.element.uvTopRight.y, uv.y);
+
+                    tail.UVvertices[i] = uv;
+                }
+                tail.Refresh();
             }
         }
     }
