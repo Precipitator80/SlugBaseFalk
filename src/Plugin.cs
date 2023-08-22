@@ -31,6 +31,8 @@ namespace SlugBaseFalk
 
         private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<PlayerGraphics, FalkSpriteStartIndices> _falkSprites = new();
         FalkAura falkAura;
+        private static readonly Color baseColor = new Color(0.27451f, 0.41961f, 0.47059f);
+        private static readonly Color effectColor = new Color(1f, 0.97255f, 0.63922f);
 
         private class FalkSpriteStartIndices
         {
@@ -69,7 +71,6 @@ namespace SlugBaseFalk
             Array.Resize(ref sLeaser.sprites, sLeaser.sprites.Length + playerGraphics.gills.numberOfSprites); // 1 for shield.
 
             playerGraphics.gills.InitiateSprites(sLeaser, rCam);
-            playerGraphics.gills.AddToContainer(sLeaser, rCam, rCam.ReturnFContainer("Midground"));
 
             int shieldIndex = sLeaser.sprites.Length - 1;
             newSprites.shield = shieldIndex;
@@ -88,6 +89,7 @@ namespace SlugBaseFalk
 
             if (_falkSprites.TryGetValue(playerGraphics, out var newSprites) && newSprites.shield < sLeaser.sprites.Length)
             {
+                playerGraphics.gills.AddToContainer(sLeaser, rCam, rCam.ReturnFContainer("Midground"));
                 rCam.ReturnFContainer("Bloom").AddChild(sLeaser.sprites[newSprites.shield]);
             }
         }
@@ -98,6 +100,7 @@ namespace SlugBaseFalk
             if (!rCam.room.game.DEBUGMODE)
             {
                 playerGraphics.gills.DrawSprites(sLeaser, rCam, timeStacker, camPos);
+                playerGraphics.gills.SetGillColors(baseColor, effectColor);
             }
             falkAura?.DisruptorDrawSprites(sLeaser);
         }
