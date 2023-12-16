@@ -15,10 +15,12 @@ namespace SlugBaseFalk
         public Color EyesColor;
         public Color GillsColor;
         public Color DiamondColor;
+        public Color AuraColor;
 
         public FAtlas TailAtlas;
 
         public FalkAura falkAura;
+        public FalkShield falkShield;
 
         public FalkPlayerData(Player player)
         {
@@ -64,6 +66,7 @@ namespace SlugBaseFalk
             EyesColor = pg.GetColor(FalkEnums.Color.Eyes) ?? Custom.hexToColor("FFF8A3");
             GillsColor = pg.GetColor(FalkEnums.Color.Gills) ?? EyesColor;
             DiamondColor = pg.GetColor(FalkEnums.Color.Diamonds) ?? EyesColor;
+            AuraColor = pg.GetColor(FalkEnums.Color.Aura) ?? BodyColor;
         }
     }
 }

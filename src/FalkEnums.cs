@@ -12,6 +12,7 @@ namespace SlugBaseFalk
             public static PlayerColor Eyes;
             public static PlayerColor Gills;
             public static PlayerColor Diamonds;
+            public static PlayerColor Aura;
         }
 
         public static void RegisterValues()
@@ -20,6 +21,7 @@ namespace SlugBaseFalk
             Color.Eyes = new PlayerColor("Eyes");
             Color.Gills = new PlayerColor("Gills");
             Color.Diamonds = new PlayerColor("Diamonds");
+            Color.Aura = new PlayerColor("Aura");
         }
     }
 }

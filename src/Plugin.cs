@@ -1,11 +1,7 @@
 ﻿using System;
 using BepInEx;
 using UnityEngine;
-using SlugBase.Features;
-using static SlugBase.Features.FeatureTypes;
 using MonoMod.RuntimeDetour;
-using MoreSlugcats;
-using Expedition;
 
 namespace SlugBaseFalk
 {
@@ -14,7 +10,9 @@ namespace SlugBaseFalk
     {
         private const string MOD_ID = "precipitator.slugbasefalk";
 
-        // Add hooks
+        /// <summary>
+        /// Add hooks.
+        /// </summary>
         public void OnEnable()
         {
             On.RainWorld.OnModsInit += Extras.WrapInit(LoadResources);
@@ -31,10 +29,13 @@ namespace SlugBaseFalk
 
             On.PlayerGraphics.ctor += PlayerGraphics_ctor;
 
-            new Hook(typeof(Player).GetProperty("isRivulet", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetGetMethod(), typeof(SlugBaseFalk.Plugin).GetMethod("HookPlayerget_isRivulet"), null);
+            new Hook(typeof(Player).GetProperty(nameof(Player.isRivulet)).GetGetMethod(), HookPlayerget_isRivulet);
         }
 
-        // Load any resources, such as sprites or sounds
+        /// <summary>
+        /// Load any resources such as sprites and sounds.
+        /// </summary>
+        /// <param name="rainWorld">The game instance.</param>
         private void LoadResources(RainWorld rainWorld)
         {
             FalkEnums.RegisterValues();
@@ -44,7 +45,6 @@ namespace SlugBaseFalk
         }
 
         private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<PlayerGraphics, FalkSpriteStartIndices> _falkSprites = new();
-        //public static Texture2D TailTexture;
         public static FAtlas TailAtlasTemplate;
         private static readonly string TAIL_SPRITE_NAME = "falkTail";
 
@@ -55,17 +55,15 @@ namespace SlugBaseFalk
 
         private void HookPlayerUpdate(On.Player.orig_Update orig, Player player, bool eu)
         {
+            // Run the original code and check whether the player is a Falk slugcat.
             orig.Invoke(player, eu);
-
             if (!player.IsFalk(out var falk))
             {
                 return;
             }
 
-            if (falk.falkAura == null)
-            {
-                falk.falkAura = new FalkAura(player);
-            }
+            // Create a new aura if required and observe input from the player(s), followed by an update.
+            falk.falkAura ??= new FalkAura(player, falk.AuraColor);
             if (player.input[0].mp && !player.input[1].mp)
             {
                 for (int i = 2; i < player.input.Length; i++)
@@ -78,13 +76,17 @@ namespace SlugBaseFalk
                 }
             }
             falk.falkAura.Update();
+
+            // Create a new shield if required and run the update function.
+            falk.falkShield ??= new FalkShield(player);
+            falk.falkShield.Update();
         }
 
         private void HookPlayerGraphicsInitiateSprites(On.PlayerGraphics.orig_InitiateSprites orig, PlayerGraphics playerGraphics, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
         {
             orig.Invoke(playerGraphics, sLeaser, rCam);
 
-            if (!playerGraphics.player.IsFalk(out var falk))
+            if (!playerGraphics.player.IsFalk(out FalkPlayerData falk))
             {
                 return;
             }
@@ -162,7 +164,7 @@ namespace SlugBaseFalk
 
                 playerGraphics.gills.DrawSprites(sLeaser, rCam, timeStacker, camPos);
 
-                falk.falkAura?.DisruptorDrawSprites(sLeaser);
+                falk.falkShield?.DisruptorDrawSprites(sLeaser);
             }
         }
 
@@ -194,9 +196,9 @@ namespace SlugBaseFalk
             falk.LoadTailAtlas();
         }
 
-        public static bool HookPlayerget_isRivulet(Player player)
+        private bool HookPlayerget_isRivulet(Func<Player, bool> orig, Player player)
         {
-            return (ModManager.MSC && player.SlugCatClass == MoreSlugcatsEnums.SlugcatStatsName.Rivulet) || (ModManager.MSC && ModManager.Expedition && RWCustom.Custom.rainWorld.ExpeditionMode && ExpeditionGame.activeUnlocks.Contains("unl-agility")) || player.IsFalk();
+            return orig(player) || player.IsFalk();
         }
 
         private void HookWaterNutUpdate(On.WaterNut.orig_Update orig, WaterNut waterNut, bool eu)
